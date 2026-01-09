@@ -1,35 +1,52 @@
 package ohm.softa.a04;
 
+import java.lang.reflect.Constructor;
 import java.util.Iterator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * @author Peter Kurfer
  * Created on 10/6/17.
  */
-public class SimpleListImpl implements SimpleList {
-
-	private ListElement head;
+public class SimpleListImpl<T> implements SimpleList<T> {
+	private final Logger logger = LogManager.getLogger();
+	private ListElement<T> head;
 	private int size;
 
 	public SimpleListImpl() {
 		head = null;
 	}
 
+	public void addDefault(){
+		try{
+			if(head.getItem() == null) throw new Exception("Cannot infer type");
+			Constructor<?>[] constructors = head.getItem().getClass().getDeclaredConstructors();
+			for(Constructor<?> con : constructors){
+				logger.info(con);
+			}
+			this.add((T) head.getItem().getClass().getDeclaredConstructor(String.class).newInstance("0"));
+		}
+		catch(Exception e){
+			throw new RuntimeException(e);
+		}
+	}
+
 	/**
 	 * Add an object to the end of the list
 	 * @param item item to add
 	 */
-	public void add(Object item){
+	public void add(T item){
 		/* special case empty list */
 		if(head == null){
-			head = new ListElement(item);
+			head = new ListElement<T>(item);
 		}else {
 			/* any other list length */
-			ListElement current = head;
+			ListElement<T> current = head;
 			while (current.getNext() != null){
 				current = current.getNext();
 			}
-			current.setNext(new ListElement(item));
+			current.setNext(new ListElement<T>(item));
 		}
 		size++;
 	}
@@ -42,25 +59,10 @@ public class SimpleListImpl implements SimpleList {
 	}
 
 	/**
-	 * Get a new SimpleList instance with all items of this list which match the given filter
-	 * @param filter SimpleFilter instance
-	 * @return new SimpleList instance
-	 */
-	public SimpleList filter(SimpleFilter filter){
-		SimpleList result = new SimpleListImpl();
-		for(Object o : this){
-			if(filter.include(o)){
-				result.add(o);
-			}
-		}
-		return result;
-	}
-
-	/**
 	 * @inheritDoc
 	 */
 	@Override
-	public Iterator iterator() {
+	public Iterator<T> iterator() {
 		return new SimpleIterator();
 	}
 
@@ -68,9 +70,9 @@ public class SimpleListImpl implements SimpleList {
 	 * Helper class which implements the Iterator interface
 	 * Has to be non static because otherwise it could not access the head of the list
 	 */
-	private class SimpleIterator implements Iterator {
+	private class SimpleIterator implements Iterator<T> {
 
-		private ListElement current = head;
+		private ListElement<T> current = head;
 
 		/**
 		 * @inheritDoc
@@ -84,8 +86,8 @@ public class SimpleListImpl implements SimpleList {
 		 * @inheritDoc
 		 */
 		@Override
-		public Object next() {
-			Object tmp = current.getItem();
+		public T next() {
+			T tmp = current.getItem();
 			current = current.getNext();
 			return tmp;
 		}
@@ -95,11 +97,11 @@ public class SimpleListImpl implements SimpleList {
 	 * Helper class for the linked list
 	 * can be static because the ListElement does not need to access the SimpleList instance
 	 */
-	private static class ListElement {
-		private Object item;
-		private ListElement next;
+	private static class ListElement<T> {
+		private T item;
+		private ListElement<T> next;
 
-		ListElement(Object item) {
+		ListElement(T item) {
 			this.item = item;
 			this.next = null;
 		}
@@ -107,14 +109,14 @@ public class SimpleListImpl implements SimpleList {
 		/**
 		 * @return get object in the element
 		 */
-		public Object getItem() {
+		public T getItem() {
 			return item;
 		}
 
 		/**
 		 * @return successor of the ListElement - may be NULL
 		 */
-		public ListElement getNext() {
+		public ListElement<T> getNext() {
 			return next;
 		}
 
@@ -122,7 +124,7 @@ public class SimpleListImpl implements SimpleList {
 		 * Sets the successor of the ListElement
 		 * @param next ListElement
 		 */
-		public void setNext(ListElement next) {
+		public void setNext(ListElement<T> next) {
 			this.next = next;
 		}
 	}
